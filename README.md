@@ -24,7 +24,7 @@ InvestTrack is a comprehensive Django-based web application that helps users man
 
 1. **Clone or download the repository**:
    ```
-   git clone <repository-url>
+   git clone https://github.com/AadityaRajSinghR/ashwin.git
    ```
    Or download and extract the ZIP file.
 
