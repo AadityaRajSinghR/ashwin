@@ -14,14 +14,14 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone or Download the Repository (if not already done)
 
 ```powershell
-git clone <repository-url>
+git clone https://github.com/AadityaRajSinghR/ashwin.git
 # Or download and extract the ZIP file manually
 ```
 
 ### 2. Navigate to the Project Directory
 
 ```powershell
-cd "path\to\InvestTrack"
+cd .\InvestTrack
 ```
 
 ### 3. Set Up a Virtual Environment
