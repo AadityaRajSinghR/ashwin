@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile - InvestTrack{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Account Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="display-1 text-muted">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    <h3>{{ user.get_full_name|default:user.username }}</h3>
+                    <p class="text-muted">{{ user.email }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Username:</strong> {{ user.username }}
+                </div>
+                {% if user.first_name or user.last_name %}
+                <div class="mb-3">
+                    <strong>Name:</strong> {{ user.get_full_name }}
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <strong>Email:</strong> {{ user.email }}
+                </div>
+                <div class="mb-3">
+                    <strong>Member Since:</strong> {{ user.date_joined|date:"F d, Y" }}
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <!-- Add this functionality in the future -->
+                    <button class="btn btn-outline-primary" disabled>Edit Profile</button>
+                    <button class="btn btn-outline-secondary" disabled>Change Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Account Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted">Total Portfolios</div>
+                            <h3 class="mb-0">{{ portfolios.count }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted">Total Assets</div>
+                            <h3 class="mb-0">{{ total_assets }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted">Total Value</div>
+                            <h3 class="mb-0">${{ total_value|floatformat:2 }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center py-3">
+                    Activity tracking will be available in a future update.
+                </p>
+                
+                <!-- Placeholder for future activity tracking -->
+                <div class="d-none">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Added Asset:</strong> AAPL
+                                <div class="text-muted small">Apple Inc.</div>
+                            </div>
+                            <span class="badge bg-secondary">May 15, 2025</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Created Portfolio:</strong> Tech Stocks
+                                <div class="text-muted small">New portfolio created</div>
+                            </div>
+                            <span class="badge bg-secondary">May 14, 2025</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Updated Asset:</strong> MSFT
+                                <div class="text-muted small">Changed quantity from 10 to 15</div>
+                            </div>
+                            <span class="badge bg-secondary">May 13, 2025</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

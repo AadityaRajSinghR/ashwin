@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Market Data - InvestTrack{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Market Data & Stock Search</h1>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Search Stocks</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" id="searchForm" class="row g-3">
+                    <div class="col-md-10">
+                        <label for="{{ form.symbol.id_for_label }}" class="visually-hidden">Stock Symbol</label>
+                        {{ form.symbol }}
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Search</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="searchResults" class="mt-4" style="display: none;">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Search Results</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="resultsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Region</th>
+                            <th>Currency</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Search results will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingIndicator" class="text-center my-4" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Searching... Please wait.</p>
+</div>
+
+<div id="noResults" class="alert alert-info mt-4" style="display: none;">
+    <p class="mb-0">No results found for your search term. Please try another symbol or company name.</p>
+</div>
+
+<div id="errorMessage" class="alert alert-danger mt-4" style="display: none;">
+    <p class="mb-0">An error occurred while searching. This could be due to API rate limits. Please try again later.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('searchForm');
+    const searchResults = document.getElementById('searchResults');
+    const resultsTable = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const noResults = document.getElementById('noResults');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const symbol = document.getElementById('{{ form.symbol.id_for_label }}').value.trim();
+        
+        if (!symbol) {
+            return;
+        }
+        
+        // Clear previous results
+        resultsTable.innerHTML = '';
+        searchResults.style.display = 'none';
+        noResults.style.display = 'none';
+        errorMessage.style.display = 'none';
+        loadingIndicator.style.display = 'block';
+        
+        // Make AJAX request
+        fetch(`{% url 'portfolio:search_symbols' %}?symbol=${encodeURIComponent(symbol)}`)
+            .then(response => response.json())
+            .then(data => {
+                loadingIndicator.style.display = 'none';
+                
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(result => {
+                        const row = document.createElement('tr');
+                        
+                        row.innerHTML = `
+                            <td>${result.symbol}</td>
+                            <td>${result.name}</td>
+                            <td>${result.type}</td>
+                            <td>${result.region}</td>
+                            <td>${result.currency}</td>
+                            <td>
+                                <a href="{% url 'portfolio:portfolio_list' %}?add=${result.symbol}&name=${encodeURIComponent(result.name)}" 
+                                   class="btn btn-sm btn-primary">Add to Portfolio</a>
+                            </td>
+                        `;
+                        
+                        resultsTable.appendChild(row);
+                    });
+                    
+                    searchResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loadingIndicator.style.display = 'none';
+                errorMessage.style.display = 'block';
+            });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ asset.name }} ({{ asset.symbol }}) - InvestTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-0">{{ asset.name }} <small class="text-muted">({{ asset.symbol }})</small></h1>
+        <p class="text-muted mb-0">
+            Portfolio: <a href="{% url 'portfolio:portfolio_detail' pk=asset.portfolio.pk %}">{{ asset.portfolio.name }}</a>
+        </p>
+    </div>
+    <div class="btn-group">
+        <a href="{% url 'portfolio:asset_edit' pk=asset.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+        <a href="{% url 'portfolio:asset_delete' pk=asset.pk %}" class="btn btn-outline-danger">
+            <i class="bi bi-trash"></i> Delete
+        </a>
+    </div>
+</div>
+
+<!-- Asset Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-light shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Current Value</h5>
+                <h2 class="card-text display-6">${{ asset.current_value|floatformat:2 }}</h2>
+                <p class="text-muted mb-0">{{ asset.quantity }} shares @ ${{ asset.current_price|default:asset.purchase_price|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Initial Investment</h5>
+                <h2 class="card-text display-6">${{ asset.total_cost|floatformat:2 }}</h2>
+                <p class="text-muted mb-0">{{ asset.quantity }} shares @ ${{ asset.purchase_price|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Profit/Loss</h5>
+                <h2 class="card-text display-6 {% if profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    ${{ profit_loss|floatformat:2 }}
+                </h2>
+                <p class="text-muted mb-0">Since {{ asset.purchase_date|date }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">ROI</h5>
+                <h2 class="card-text display-6 {% if roi_percentage >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ roi_percentage|floatformat:2 }}%
+                </h2>
+                <p class="text-muted mb-0">
+                    {% if asset.last_updated %}
+                    Updated: {{ asset.last_updated|date:"M d, Y" }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Price History Chart -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Price History</h5>
+            <form method="post" class="row row-cols-lg-auto g-3 align-items-center">
+                {% csrf_token %}
+                <div class="col-12">
+                    <label class="visually-hidden" for="{{ date_form.start_date.id_for_label }}">Start Date</label>
+                    {{ date_form.start_date }}
+                </div>
+                <div class="col-12">
+                    <label class="visually-hidden" for="{{ date_form.end_date.id_for_label }}">End Date</label>
+                    {{ date_form.end_date }}
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if chart_data_json %}
+            <canvas id="priceHistoryChart" height="300"></canvas>
+        {% else %}
+            <div class="text-center py-5">
+                <p class="text-muted">No historical data available for this asset.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Asset Details and Notes -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Asset Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>Symbol:</th>
+                            <td>{{ asset.symbol }}</td>
+                        </tr>
+                        <tr>
+                            <th>Asset Type:</th>
+                            <td>{{ asset.get_asset_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Quantity:</th>
+                            <td>{{ asset.quantity }}</td>
+                        </tr>
+                        <tr>
+                            <th>Purchase Date:</th>
+                            <td>{{ asset.purchase_date|date }}</td>
+                        </tr>
+                        <tr>
+                            <th>Purchase Price:</th>
+                            <td>${{ asset.purchase_price|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <th>Current Price:</th>
+                            <td>${{ asset.current_price|default:"-"|floatformat:2 }}</td>
+                        </tr>
+                        {% if asset.last_updated %}
+                        <tr>
+                            <th>Last Updated:</th>
+                            <td>{{ asset.last_updated|date:"F d, Y H:i" }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Notes</h5>
+            </div>
+            <div class="card-body">
+                {% if asset.notes %}
+                    <p>{{ asset.notes|linebreaks }}</p>
+                {% else %}
+                    <p class="text-muted">No notes available for this asset.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if chart_data_json %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Price History Chart
+    const chartData = {{ chart_data_json|safe }};
+    
+    if (chartData.length > 0) {
+        const ctx = document.getElementById('priceHistoryChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.map(item => item.date),
+                datasets: [{
+                    label: 'Stock Price',
+                    data: chartData.map(item => item.price),
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += '$' + context.raw.toFixed(2);
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

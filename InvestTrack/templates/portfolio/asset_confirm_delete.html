@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Asset - InvestTrack{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h3 class="mb-0">Delete Asset</h3>
+            </div>
+            <div class="card-body">
+                <p class="lead text-center">Are you sure you want to delete the asset "{{ asset.name }} ({{ asset.symbol }})"?</p>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    This action cannot be undone.
+                </div>
+                
+                <p>
+                    <strong>Asset:</strong> {{ asset.name }} ({{ asset.symbol }})<br>
+                    <strong>Portfolio:</strong> {{ asset.portfolio.name }}<br>
+                    <strong>Quantity:</strong> {{ asset.quantity }}<br>
+                    <strong>Current Value:</strong> ${{ asset.current_value|floatformat:2 }}
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'portfolio:asset_detail' pk=asset.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete Asset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block title %}{{ title }} - InvestTrack{% endblock %}
+
+{% block extra_css %}
+<style>
+    .symbol-suggestions {
+        position: absolute;
+        border: 1px solid #ccc;
+        border-top: none;
+        z-index: 99;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 300px;
+        overflow-y: auto;
+        background-color: white;
+        display: none;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .suggestion-item {
+        padding: 8px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    .suggestion-item:hover {
+        background-color: #f8f9fa;
+    }
+    .suggestion-item .symbol {
+        font-weight: bold;
+    }
+    .suggestion-item .type {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }    .symbol-search-container {
+        position: relative;
+    }
+    .symbol-loader {
+        display: none;
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(0, 123, 255, 0.2);
+        border-radius: 50%;
+        border-top-color: #007bff;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .suggestion-group-header {
+        background-color: #f8f9fa;
+        padding: 5px 15px;
+        font-weight: bold;
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">{{ title }}</h3>
+                {% if portfolio %}
+                <p class="text-white-50 mb-0">Portfolio: {{ portfolio.name }}</p>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                      <div class="row">
+                        <div class="col-md-6 mb-3">                            <label for="{{ form.symbol.id_for_label }}" class="form-label">Stock Symbol:</label>
+                            {{ form.symbol.errors }}
+                            <div class="symbol-search-container">
+                                <input type="text" id="symbol-search" class="form-control" placeholder="Search by company name or symbol...">
+                                <div class="symbol-loader" id="symbol-loader"></div>
+                                <div id="symbol-suggestions" class="symbol-suggestions"></div>
+                            </div>
+                            {{ form.symbol }}
+                            <div class="form-text">Enter or search for the stock ticker symbol (e.g., AAPL, MSFT)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Asset Name:</label>
+                            {{ form.name.errors }}
+                            {{ form.name }}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.asset_type.id_for_label }}" class="form-label">Asset Type:</label>
+                            {{ form.asset_type.errors }}
+                            {{ form.asset_type }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity:</label>
+                            {{ form.quantity.errors }}
+                            {{ form.quantity }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.purchase_price.id_for_label }}" class="form-label">Purchase Price:</label>
+                            {{ form.purchase_price.errors }}
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ form.purchase_price }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.purchase_date.id_for_label }}" class="form-label">Purchase Date:</label>
+                        {{ form.purchase_date.errors }}
+                        {{ form.purchase_date }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">Notes (optional):</label>
+                        {{ form.notes.errors }}
+                        {{ form.notes }}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        {% if portfolio %}
+                        <a href="{% url 'portfolio:portfolio_detail' pk=portfolio.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                        {% elif asset %}
+                        <a href="{% url 'portfolio:asset_detail' pk=asset.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                        {% else %}
+                        <a href="{% url 'portfolio:portfolio_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">Save Asset</button>                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {    const symbolSearchInput = document.getElementById('symbol-search');
+    const symbolField = document.getElementById('{{ form.symbol.id_for_label }}');
+    const nameField = document.getElementById('{{ form.name.id_for_label }}');
+    const suggestionsContainer = document.getElementById('symbol-suggestions');
+    const loaderElement = document.getElementById('symbol-loader');
+    
+    // Hide the actual symbol field and use our custom search field
+    symbolField.style.display = 'none';
+    
+    // If symbol field already has a value, populate the search field
+    if (symbolField.value) {
+        symbolSearchInput.value = symbolField.value;
+    }
+    
+    let debounceTimer;
+    
+    symbolSearchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Update the hidden field with the current input
+        symbolField.value = query;
+        
+        // Clear the previous timer
+        clearTimeout(debounceTimer);
+        
+        // Hide suggestions if query is too short
+        if (query.length < 2) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+        
+        // Set a new timer to wait before making API call
+        debounceTimer = setTimeout(() => {
+            fetchSymbolSuggestions(query);
+        }, 300);
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!symbolSearchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+      // Function to fetch suggestions from API
+    function fetchSymbolSuggestions(query) {
+        // Show loader
+        loaderElement.style.display = 'block';
+        
+        fetch(`{% url 'portfolio:symbol_search_api' %}?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                // Hide loader
+                loaderElement.style.display = 'none';
+                
+                if (data.results && data.results.length > 0) {
+                    displaySuggestions(data.results);
+                } else {
+                    suggestionsContainer.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                // Hide loader
+                loaderElement.style.display = 'none';
+                console.error('Error fetching symbol suggestions:', error);
+                suggestionsContainer.style.display = 'none';
+            });
+    }
+    
+    // Function to display suggestions grouped by type
+    function displaySuggestions(results) {
+        suggestionsContainer.innerHTML = '';
+        
+        // Group results by type
+        const groupedResults = {};
+        
+        results.forEach(result => {
+            const type = result.type || 'Other';
+            if (!groupedResults[type]) {
+                groupedResults[type] = [];
+            }
+            groupedResults[type].push(result);
+        });
+        
+        // Display results by group
+        Object.keys(groupedResults).forEach(type => {
+            // Add group header
+            const header = document.createElement('div');
+            header.className = 'suggestion-group-header';
+            header.textContent = type;
+            suggestionsContainer.appendChild(header);
+            
+            // Add group items
+            groupedResults[type].forEach(result => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `
+                    <div class="symbol">${result.symbol} - ${result.name}</div>
+                    <div class="type">${result.region} | ${result.currency}</div>
+                `;
+                
+                item.addEventListener('click', function() {
+                    symbolSearchInput.value = result.symbol;
+                    symbolField.value = result.symbol;
+                    nameField.value = result.name;
+                    suggestionsContainer.style.display = 'none';
+                });
+                
+                suggestionsContainer.appendChild(item);
+            });
+        });
+        
+        suggestionsContainer.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}My Portfolios - InvestTrack{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">My Portfolios</h1>
+    <a href="{% url 'portfolio:portfolio_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Portfolio
+    </a>
+</div>
+
+{% if portfolios %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for portfolio in portfolios %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ portfolio.name }}</h5>
+                    {% if portfolio.description %}
+                        <p class="card-text small text-muted">{{ portfolio.description|truncatechars:100 }}</p>
+                    {% endif %}
+                    <div class="d-flex justify-content-between mt-3">
+                        <div>
+                            <div class="text-muted small">Total Value</div>
+                            <div class="fw-bold">${{ portfolio.total_value|floatformat:2 }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-muted small">Return</div>
+                            <div class="fw-bold {% if portfolio.total_return >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ portfolio.return_percentage|floatformat:2 }}%
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-secondary">{{ portfolio.assets.count }} Assets</span>
+                        <small class="text-muted">Created: {{ portfolio.created_at|date }}</small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'portfolio:portfolio_detail' pk=portfolio.pk %}" class="btn btn-outline-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <h3>No Portfolios Yet</h3>
+            <p class="lead">Start by creating your first portfolio to track your investments.</p>
+            <a href="{% url 'portfolio:portfolio_create' %}" class="btn btn-primary btn-lg mt-3">
+                Create Portfolio
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load custom_tags %}
+
+{% block title %}Dashboard - InvestTrack{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-dashboard {
+        transition: transform .3s;
+    }
+    .card-dashboard:hover {
+        transform: translateY(-5px);
+    }
+    .positive-value {
+        color: #28a745;
+    }
+    .negative-value {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Dashboard</h1>
+    <a href="{% url 'portfolio:portfolio_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Portfolio
+    </a>
+</div>
+
+{% if portfolios %}
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card card-dashboard bg-light shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Portfolios</h5>
+                    <h2 class="card-text display-6">{{ portfolio_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-dashboard bg-light shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Value</h5>
+                    <h2 class="card-text display-6">${{ total_value|floatformat:2 }}</h2>
+                    <p class="text-muted">{{ total_value|convert_to_inr|format_inr }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-dashboard bg-light shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Investment</h5>
+                    <h2 class="card-text display-6">${{ total_investment|floatformat:2 }}</h2>
+                    <p class="text-muted">{{ total_investment|convert_to_inr|format_inr }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-dashboard bg-light shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Return</h5>
+                    <h2 class="card-text display-6 {% if total_return >= 0 %}positive-value{% else %}negative-value{% endif %}">
+                        ${{ total_return|floatformat:2 }}
+                    </h2>
+                    <p class="text-muted {% if total_return >= 0 %}positive-value{% else %}negative-value{% endif %}">
+                        {{ total_return|convert_to_inr|format_inr }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card card-dashboard bg-light shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">ROI</h5>
+                    <h2 class="card-text display-6 {% if return_percentage >= 0 %}positive-value{% else %}negative-value{% endif %}">
+                        {{ return_percentage|floatformat:2 }}%
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Distribution Chart -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Portfolio Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="portfolioDistributionChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0">Your Portfolios</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for portfolio in portfolios %}
+                        <a href="{% url 'portfolio:portfolio_detail' pk=portfolio.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ portfolio.name }}</h6>
+                                <small class="text-muted">{{ portfolio.assets.count }} assets</small>
+                            </div>
+                            <div class="text-end">
+                                <div>${{ portfolio.total_value|floatformat:2 }}</div>
+                                <small class="{% if portfolio.total_return >= 0 %}positive-value{% else %}negative-value{% endif %}">
+                                    {{ portfolio.return_percentage|floatformat:2 }}%
+                                </small>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <h3>Welcome to InvestTrack!</h3>
+            <p class="lead">You haven't created any portfolios yet.</p>
+            <a href="{% url 'portfolio:portfolio_create' %}" class="btn btn-primary btn-lg mt-3">
+                Create Your First Portfolio
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if portfolios %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Portfolio Distribution Chart
+    const portfolioData = {{ portfolio_data_json|safe }};
+    
+    if (portfolioData.length > 0) {
+        const ctx = document.getElementById('portfolioDistributionChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: portfolioData.map(item => item.name),
+                datasets: [{
+                    data: portfolioData.map(item => item.value),
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                        'rgba(255, 159, 64, 0.7)',
+                        'rgba(199, 199, 199, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += '$' + context.raw.toFixed(2);
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}
