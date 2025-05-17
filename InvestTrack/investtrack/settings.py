@@ -130,7 +130,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Alpha Vantage API key
-ALPHA_VANTAGE_API_KEY = 'YOUR_API_KEY_HERE'  # Replace with your actual API key
+ALPHA_VANTAGE_API_KEY = '7KK1O8WMINNLRR7Z'  # Replace with your actual API key
 
 # Login/Logout URLs
 LOGIN_REDIRECT_URL = 'portfolio:dashboard'
